@@ -20,7 +20,6 @@
 
 import sys
 import os
-import math
 import json
 import numpy as np
 
@@ -374,9 +373,15 @@ for lig_chain, lig_atoms_list in ligand_atoms.items():
     # Count pairs with PAE < cutoff
     num_good_pae = np.sum(pae_submatrix < pae_cutoff)
     
-    # Get plddt values for ligand atoms
-    lig_plddt = atom_plddts[[lig_atoms_list[i]['atom_num'] - 1 for i in range(min(len(lig_atoms_list), len(lig_tok_idx)))]]
-    mean_plddt = np.mean(lig_plddt) if len(lig_plddt) > 0 else 0.0
+    # Get plddt values for ligand atoms (with bounds checking)
+    try:
+        valid_indices = [lig_atoms_list[i]['atom_num'] - 1 
+                        for i in range(min(len(lig_atoms_list), len(lig_tok_idx)))
+                        if 0 <= lig_atoms_list[i]['atom_num'] - 1 < len(atom_plddts)]
+        lig_plddt = atom_plddts[valid_indices] if valid_indices else np.array([])
+        mean_plddt = np.mean(lig_plddt) if len(lig_plddt) > 0 else 0.0
+    except (IndexError, KeyError):
+        mean_plddt = 0.0
     
     # Calculate ipSAE score
     num_prot_res = len(protein_token_indices)
@@ -466,9 +471,15 @@ for other_chain, other_residues in other_chain_residues.items():
     min_pae = np.min(pae_submatrix)
     num_good_pae = np.sum(pae_submatrix < pae_cutoff)
     
-    # Get plddt values for the other chain residues
-    other_plddt = atom_plddts[[other_residues[i]['atom_num'] - 1 for i in range(min(len(other_residues), len(other_tok_idx)))]]
-    mean_plddt = np.mean(other_plddt) if len(other_plddt) > 0 else 0.0
+    # Get plddt values for the other chain residues (with bounds checking)
+    try:
+        valid_indices = [other_residues[i]['atom_num'] - 1 
+                        for i in range(min(len(other_residues), len(other_tok_idx)))
+                        if 0 <= other_residues[i]['atom_num'] - 1 < len(atom_plddts)]
+        other_plddt = atom_plddts[valid_indices] if valid_indices else np.array([])
+        mean_plddt = np.mean(other_plddt) if len(other_plddt) > 0 else 0.0
+    except (IndexError, KeyError):
+        mean_plddt = 0.0
     
     num_prot_res = len(protein_token_indices)
     num_other_res = len(other_tok_idx)

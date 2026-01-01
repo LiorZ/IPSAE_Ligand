@@ -341,8 +341,15 @@ elif boltz1:
     data_pae = np.load(pae_file_path)
     pae_matrix_full = np.array(data_pae['pae'])
     
-    # Load pLDDT values
-    plddt_file_path = pae_file_path.replace("pae", "plddt")
+    # Load pLDDT values - construct path more robustly
+    pae_dir = os.path.dirname(pae_file_path)
+    pae_basename = os.path.basename(pae_file_path)
+    if pae_basename.startswith("pae_"):
+        plddt_basename = "plddt_" + pae_basename[4:]
+    else:
+        plddt_basename = pae_basename.replace("pae", "plddt")
+    plddt_file_path = os.path.join(pae_dir, plddt_basename) if pae_dir else plddt_basename
+    
     if os.path.exists(plddt_file_path):
         data_plddt = np.load(plddt_file_path)
         atom_plddts = np.array(100.0 * data_plddt['plddt'])
@@ -355,22 +362,22 @@ elif boltz1:
     token_chain_ids = []
     token_res_ids = []
     
-    # Build token list from protein residues first (sorted by chain, then by atom_num)
+    # Build token list from all chains, then sort by atom_num to match PAE matrix order
     all_tokens = []
     for res in protein_residues:
         all_tokens.append((res['atom_num'], res['chainid'], res['resnum']))
     
-    # Add ligand atoms
+    # Add ligand atoms (use atom index within chain as pseudo res_id for tracking)
     for chain_id, atoms in ligand_atoms.items():
-        for atom in atoms:
-            all_tokens.append((atom['atom_num'], atom['chainid'], 1))  # Use 1 for ligand res_id
+        for idx, atom in enumerate(atoms, start=1):
+            all_tokens.append((atom['atom_num'], atom['chainid'], idx))
     
     # Add other chain residues
     for chain_id, residues in other_chain_residues.items():
         for res in residues:
             all_tokens.append((res['atom_num'], res['chainid'], res['resnum']))
     
-    # Sort by atom number to get correct order
+    # Sort by atom number to get correct order matching PAE matrix
     all_tokens.sort(key=lambda x: x[0])
     
     # Extract chain_ids and res_ids

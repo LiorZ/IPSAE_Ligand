@@ -1,5 +1,5 @@
 # ipsae_ligand.py
-# Script for calculating the ipSAE score for scoring protein-ligand interactions in AlphaFold3 models
+# Script for calculating the ipSAE score for scoring protein-ligand interactions in AlphaFold3 and Boltz1 models
 # Adapted from ipsae.py for protein-protein interactions
 # https://www.biorxiv.org/content/10.1101/2025.02.10.637595v1
 
@@ -14,9 +14,13 @@
 # MIT license: script can be modified and redistributed for non-commercial and commercial use
 
 # Usage:
-#  python ipsae_ligand.py <path_to_af3_pae_file> <path_to_af3_cif_file> <pae_cutoff> <dist_cutoff> [protein_chain]
-#  python ipsae_ligand.py fold_protein_ligand_full_data_0.json fold_protein_ligand_model_0.cif 10 10
-#  python ipsae_ligand.py fold_protein_ligand_full_data_0.json fold_protein_ligand_model_0.cif 10 10 A
+#  For AlphaFold3:
+#    python ipsae_ligand.py <path_to_af3_pae_json_file> <path_to_af3_cif_file> <pae_cutoff> <dist_cutoff> [protein_chain]
+#    python ipsae_ligand.py fold_protein_ligand_full_data_0.json fold_protein_ligand_model_0.cif 10 10
+#
+#  For Boltz1:
+#    python ipsae_ligand.py <path_to_boltz1_pae_npz_file> <path_to_boltz1_cif_file> <pae_cutoff> <dist_cutoff> [protein_chain]
+#    python ipsae_ligand.py pae_protein_ligand_model_0.npz protein_ligand_model_0.cif 10 10
 
 import sys
 import os
@@ -131,10 +135,15 @@ def get_representative_atom_name(residue_name):
 
 # Ensure correct usage
 if len(sys.argv) < 5:
-    print("Usage for AF3 protein-ligand complexes:")
+    print("Usage for AF3 and Boltz1 protein-ligand complexes:")
+    print("")
+    print("AlphaFold3:")
     print("   python ipsae_ligand.py <path_to_pae_json_file> <path_to_mmcif_file> <pae_cutoff> <dist_cutoff> [protein_chain]")
     print("   python ipsae_ligand.py fold_protein_ligand_full_data_0.json fold_protein_ligand_model_0.cif 10 10")
-    print("   python ipsae_ligand.py fold_protein_ligand_full_data_0.json fold_protein_ligand_model_0.cif 10 10 A")
+    print("")
+    print("Boltz1:")
+    print("   python ipsae_ligand.py <path_to_pae_npz_file> <path_to_mmcif_file> <pae_cutoff> <dist_cutoff> [protein_chain]")
+    print("   python ipsae_ligand.py pae_protein_ligand_model_0.npz protein_ligand_model_0.cif 10 10")
     print("")
     print("This script calculates ipSAE scores for protein - ligand interactions")
     print("By default, uses chain A as the protein. Optionally specify the protein chain.")
@@ -153,8 +162,17 @@ dist_string = str(int(dist_cutoff))
 if dist_cutoff < 10:
     dist_string = "0" + dist_string
 
-if ".cif" not in pdb_path or not pae_file_path.endswith(".json"):
-    print("This script requires AF3 mmCIF (.cif) and JSON (.json) files")
+# Determine file type (AF3 or Boltz1)
+if ".cif" in pdb_path and pae_file_path.endswith(".json"):
+    af3 = True
+    boltz1 = False
+elif ".cif" in pdb_path and pae_file_path.endswith(".npz"):
+    af3 = False
+    boltz1 = True
+else:
+    print("This script requires:")
+    print("  - For AF3: mmCIF (.cif) structure file and JSON (.json) PAE file")
+    print("  - For Boltz1: mmCIF (.cif) structure file and NPZ (.npz) PAE file")
     sys.exit(1)
 
 pdb_stem = pdb_path.replace(".cif", "")
@@ -289,20 +307,76 @@ print(f"Found other protein/peptide chains: {list(other_chain_residues.keys())}"
 for chain, residues in other_chain_residues.items():
     print(f"  Chain {chain}: {len(residues)} residues")
 
-# Load AF3 PAE data
+# Load PAE data (AF3 or Boltz1)
 print(f"\nLoading PAE data from {pae_file_path}...")
-if os.path.exists(pae_file_path):
-    with open(pae_file_path, 'r') as file:
-        data = json.load(file)
-else:
-    print(f"AF3 PAE file does not exist: {pae_file_path}")
-    sys.exit()
 
-# Get token information
-token_chain_ids = data['token_chain_ids']
-token_res_ids = data['token_res_ids']
-pae_matrix_full = np.array(data['pae'])
-atom_plddts = np.array(data['atom_plddts'])
+if af3:
+    # Load AlphaFold3 JSON data
+    if os.path.exists(pae_file_path):
+        with open(pae_file_path, 'r') as file:
+            data = json.load(file)
+    else:
+        print(f"AF3 PAE file does not exist: {pae_file_path}")
+        sys.exit()
+
+    # Get token information from AF3
+    token_chain_ids = data['token_chain_ids']
+    token_res_ids = data['token_res_ids']
+    pae_matrix_full = np.array(data['pae'])
+    atom_plddts = np.array(data['atom_plddts'])
+
+elif boltz1:
+    # Load Boltz1 NPZ data
+    # Boltz1 filenames pattern:
+    # structure_model_0.cif
+    # pae_structure_model_0.npz
+    # plddt_structure_model_0.npz
+    # confidence_structure_model_0.json
+    
+    if not os.path.exists(pae_file_path):
+        print(f"Boltz1 PAE file does not exist: {pae_file_path}")
+        sys.exit()
+    
+    # Load PAE matrix
+    data_pae = np.load(pae_file_path)
+    pae_matrix_full = np.array(data_pae['pae'])
+    
+    # Load pLDDT values
+    plddt_file_path = pae_file_path.replace("pae", "plddt")
+    if os.path.exists(plddt_file_path):
+        data_plddt = np.load(plddt_file_path)
+        atom_plddts = np.array(100.0 * data_plddt['plddt'])
+    else:
+        print(f"Warning: Boltz1 pLDDT file not found: {plddt_file_path}")
+        atom_plddts = np.zeros(pae_matrix_full.shape[0])
+    
+    # For Boltz1, we need to build token_chain_ids and token_res_ids from the structure
+    # Each token corresponds to a residue or atom in order
+    token_chain_ids = []
+    token_res_ids = []
+    
+    # Build token list from protein residues first (sorted by chain, then by atom_num)
+    all_tokens = []
+    for res in protein_residues:
+        all_tokens.append((res['atom_num'], res['chainid'], res['resnum']))
+    
+    # Add ligand atoms
+    for chain_id, atoms in ligand_atoms.items():
+        for atom in atoms:
+            all_tokens.append((atom['atom_num'], atom['chainid'], 1))  # Use 1 for ligand res_id
+    
+    # Add other chain residues
+    for chain_id, residues in other_chain_residues.items():
+        for res in residues:
+            all_tokens.append((res['atom_num'], res['chainid'], res['resnum']))
+    
+    # Sort by atom number to get correct order
+    all_tokens.sort(key=lambda x: x[0])
+    
+    # Extract chain_ids and res_ids
+    for atom_num, chain_id, res_id in all_tokens:
+        token_chain_ids.append(chain_id)
+        token_res_ids.append(res_id)
 
 print(f"PAE matrix shape: {pae_matrix_full.shape}")
 print(f"Number of tokens: {len(token_chain_ids)}")

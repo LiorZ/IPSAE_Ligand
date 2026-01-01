@@ -25,13 +25,19 @@ Boltz1:
 
 # IPSAE Ligand - Protein-Small Molecule Interactions
 
-For scoring protein-ligand interactions in AlphaFold3 models, use the `ipsae_ligand.py` script:
+For scoring protein-ligand interactions in AlphaFold3 and Boltz1 models, use the `ipsae_ligand.py` script:
 
 ## Usage
 
+AlphaFold3:
+
     python ipsae_ligand.py <path_to_af3_json_file> <path_to_af3_cif_file> <pae_cutoff> <dist_cutoff> [protein_chain]
     python ipsae_ligand.py fold_aurka_0_tpx2_0_full_data_0.json fold_aurka_0_tpx2_0_model_0.cif 10 10
-    python ipsae_ligand.py fold_aurka_0_tpx2_0_full_data_0.json fold_aurka_0_tpx2_0_model_0.cif 10 10 A
+
+Boltz1:
+
+    python ipsae_ligand.py <path_to_boltz1_pae_npz_file> <path_to_boltz1_cif_file> <pae_cutoff> <dist_cutoff> [protein_chain]
+    python ipsae_ligand.py pae_protein_ligand_model_0.npz protein_ligand_model_0.cif 10 10
 
 This script:
 - Treats chain A (or specified chain) as the protein

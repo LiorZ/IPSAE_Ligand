@@ -51,6 +51,7 @@ The script performs two passes over the mmCIF file:
 - Extracts the PAE submatrix for protein-ligand interactions
 - Uses protein token indices (rows) vs ligand token indices (columns)
 - Handles the token-based structure of AF3 PAE matrices
+- For Boltz1, builds token mappings from structure data
 
 #### ipSAE Calculation
 For each protein-ligand pair:
@@ -62,11 +63,13 @@ For each protein-ligand pair:
 ## Usage
 
 ```bash
+# AlphaFold3:
 python ipsae_ligand.py <pae_json_file> <mmcif_file> <pae_cutoff> <dist_cutoff> [protein_chain]
-
-# Examples:
 python ipsae_ligand.py fold_aurka_0_tpx2_0_full_data_0.json fold_aurka_0_tpx2_0_model_0.cif 10 10
-python ipsae_ligand.py fold_aurka_0_tpx2_0_full_data_0.json fold_aurka_0_tpx2_0_model_0.cif 10 10 A
+
+# Boltz1:
+python ipsae_ligand.py <pae_npz_file> <mmcif_file> <pae_cutoff> <dist_cutoff> [protein_chain]
+python ipsae_ligand.py pae_protein_ligand_model_0.npz protein_ligand_model_0.cif 10 10
 ```
 
 ## Example Output
@@ -136,15 +139,14 @@ The output file (`*_ligand_XX_XX.txt`) contains:
 
 ## Files Modified/Created
 
-1. **ipsae_ligand.py** - New script for protein-ligand ipSAE scoring
+1. **ipsae_ligand.py** - New script for protein-ligand ipSAE scoring (supports AF3 and Boltz1)
 2. **README.md** - Updated with documentation for the new script
 3. **REPORT.md** - This report explaining the implementation
 
 ## Limitations
 
-1. Currently only supports AlphaFold3 mmCIF format (not AF2 PDB or Boltz1)
-2. Distance cutoff parameter is not currently used (future enhancement)
-3. By-residue output file not yet implemented for ligand interactions
+1. Distance cutoff parameter is not currently used (future enhancement)
+2. By-residue output file not yet implemented for ligand interactions
 
 ## Future Enhancements
 

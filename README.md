@@ -23,7 +23,67 @@ Boltz1:
      python ipsae.py pae_AURKA_TPX2_model_0.npz  AURKA_TPX2_model_0.cif 10 10
 
 
-# Output chain-chain score file
+# IPSAE Ligand - Protein-Small Molecule Interactions
+
+For scoring protein-ligand interactions in AlphaFold3 and Boltz1 models, use the `ipsae_ligand.py` script:
+
+## Usage
+
+AlphaFold3:
+
+    python ipsae_ligand.py <path_to_af3_json_file> <path_to_af3_cif_file> <pae_cutoff> <dist_cutoff> [protein_chain]
+    python ipsae_ligand.py fold_aurka_0_tpx2_0_full_data_0.json fold_aurka_0_tpx2_0_model_0.cif 10 10
+
+Boltz1:
+
+    python ipsae_ligand.py <path_to_boltz1_pae_npz_file> <path_to_boltz1_cif_file> <pae_cutoff> <dist_cutoff> [protein_chain]
+    python ipsae_ligand.py pae_protein_ligand_model_0.npz protein_ligand_model_0.cif 10 10
+
+This script:
+- Treats chain A (or specified chain) as the protein
+- Treats all other chains as ligands (small molecules) or peptides
+- Calculates ipSAE scores for each protein-ligand pair
+
+## Output ligand score file
+
+Example output for AURKA (protein chain A) with ATP, two Mg ions, and TPX2 peptide:
+
+    Protein  Ligand  LigandName  Type        NumProtRes  NumLigAtoms  ipSAE      ipSAE_max  MeanPAE    MinPAE     NumGoodPAE  MeanPlddt  Model
+    A        C       ATP         ligand             296           31  0.881437   0.533034     3.4472     0.8000         8719      91.93  fold_aurka_0_tpx2_0_model_0
+    A        D       MG          ligand             296            1  0.887526   0.519068     3.2966     1.0000          281      91.47  fold_aurka_0_tpx2_0_model_0
+    A        E       MG          ligand             296            1  0.875538   0.389736     3.4534     1.3000          281      85.96  fold_aurka_0_tpx2_0_model_0
+    A        B       peptide     peptide            296           43  0.727848   0.448952     5.7617     0.9000        11236      78.29  fold_aurka_0_tpx2_0_model_0
+
+## Output columns
+
+**Protein** = Protein chain identifier
+
+**Ligand** = Ligand/other chain identifier
+
+**LigandName** = Residue name of the ligand (e.g., ATP, MG) or "peptide" for protein chains
+
+**Type** = "ligand" for small molecules or "peptide" for protein/peptide chains
+
+**NumProtRes** = Number of protein residues/tokens
+
+**NumLigAtoms** = Number of ligand atoms/tokens
+
+**ipSAE** = ipSAE score calculated using all PAE values below the cutoff
+
+**ipSAE_max** = Maximum per-residue ipSAE score
+
+**MeanPAE** = Mean PAE value for the protein-ligand interaction
+
+**MinPAE** = Minimum PAE value for the protein-ligand interaction  
+
+**NumGoodPAE** = Number of PAE values below the cutoff
+
+**MeanPlddt** = Mean pLDDT value for the ligand atoms
+
+**Model** = Input model filename
+
+
+# Output chain-chain score file (original ipsae.py)
 
 AlphaFold2 complex of RAF1 (chain A), KSR1 (chain B), and MEK1 (chain C). RAF1 and KSR1 kinase domains make pseudosymmetric dimer, similar to BRAF homodimer. In this model, MEK1 kinase domain interacts directly with RAF1 kinase domain (AF3 places MEK1 on KSR1; both complexes exist in PDB). 
 
